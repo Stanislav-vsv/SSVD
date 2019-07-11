@@ -1,0 +1,48 @@
+<workflow-app name="wf_reg_ssvd_monthly" xmlns="uri:oozie:workflow:0.5">
+  <parameters>
+        <property>
+            <name>wf_reg_name</name>
+			<value>wf_reg_ssvd_monthly</value>
+        </property>
+  </parameters>
+  <global>
+            <configuration>
+                <property>
+                    <name>oozie.launcher.mapred.job.queue.name</name>
+                    <value>tech_oozie_launchers</value>
+                </property>
+                <property>
+                    <name>oozie.launcher.mapreduce.map.memory.mb</name>
+                    <value>256</value>
+                </property>
+                <property>
+                    <name>oozie.launcher.yarn.app.mapreduce.am.resource.mb</name>
+                    <value>256</value>
+                </property>
+            </configuration>
+  </global>
+    <start to="decision_month_days"/>
+    <kill name="Kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+	
+	<decision name="decision_month_days">
+        <switch>
+            <case to="wf_ctl_ssvd_monthly_day2">
+              ${LOAD_MONTH_DAY eq "02"}
+            </case>
+            <default to="End"/>
+        </switch>
+    </decision>
+	
+	<action name="wf_ctl_ssvd_monthly_day2">
+        <sub-workflow>
+            <app-path>${nameNode}${wf_ctl_path}/wf_ctl_ssvd_monthly_day2</app-path>
+              <propagate-configuration/>
+        </sub-workflow>
+        <ok to="End"/>
+        <error to="End"/>
+	</action>
+	
+    <end name="End"/>
+</workflow-app>

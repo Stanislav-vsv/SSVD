@@ -1,0 +1,94 @@
+<workflow-app name="wf_ssvd_cr_sbbs_credhist_req_log" xmlns="uri:oozie:workflow:0.5">
+  <parameters>
+        <property>
+            <name>wf_reg_name</name>
+        </property>
+        <property>
+            <name>wf_ctl_name</name>
+        </property>
+  </parameters>
+  <credentials>
+    <credential name="hive2" type="hive2">
+      <property>
+        <name>hive2.jdbc.url</name>
+        <value>${hive2_jdbc_url}</value>
+      </property>
+      <property>
+        <name>hive2.server.principal</name>
+        <value>${hive2_server_principal}</value>
+      </property>
+    </credential>
+  </credentials>
+    <start to="atom-header-cr_sbbs_credhist_req_log"/>
+    <kill name="Kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+	    <action name="atom-header-cr_sbbs_credhist_req_log">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <main-class>ru.alfa.bi.hdp.orchestration.AtomHeader</main-class>
+            <java-opts>-DATOM_NAME=wf_ssvd_cr_sbbs_credhist_req_log -DCTL=${wf_ctl_name} -DREG=${wf_reg_name} -DDB_CONNECTION=${oracle_jdbc_url} -DDB_USER=${oracle_jdbc_user} -DDB_PASSWORD=${oracle_jdbc_password} -DCURRENT_DAY=${current_day}</java-opts>
+            <file>/user/${user_name}/libs/generator-1.0-SNAPSHOT-jar-with-dependencies.jar#generator-1.0-SNAPSHOT-jar-with-dependencies.jar</file>
+			<file>/user/${user_name}/libs/ojdbc6.jar#ojdbc6.jar</file>
+        </java>
+        <ok to="sqoop-cr_sbbs_credhist_req_log"/>
+        <error to="Kill"/>
+    </action>
+    <action name="sqoop-cr_sbbs_credhist_req_log">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+              <arg>import</arg>
+              <arg>--connect</arg>
+              <arg>${connection_string}</arg>
+              <arg>--username</arg>
+              <arg>${ORA_USER}</arg>
+              <arg>--password</arg>
+              <arg>${ORA_PASSWORD}</arg>
+              <arg>--compression-codec</arg>
+              <arg>org.apache.hadoop.io.compress.SnappyCodec</arg>
+              <arg>--as-parquetfile</arg>
+              <arg>--delete-target-dir</arg>
+              <arg>--target-dir</arg>
+              <arg>${PATH_TO_TMP}/edbch_cr_sbbs_credhist_req_log_tmp</arg>
+              <arg>--query</arg>
+              <arg>select /*+ parallel(x,4)*/ EVNUM, to_char(EVTIME,'yyyy-MM-dd hh24:mi:ss') as  EVTIME, CUSTOMER_ID, CHANNEL_ID, REQ_RESULT, JOB_INSERT, JOB_UPDATE, JOB_REQUEST, to_char(AS_OF_DTTM,'yyyy-MM-dd hh24:mi:ss') as AS_OF_DTTM, BUREAU_ID, CHAIN_ID from EDBCH_DATA.CR_SBBS_CREDHIST_REQ_LOG x where evtime >= to_date('01.05.2018','dd.mm.yyyy') and $CONDITIONS</arg>
+              <arg>-m</arg>
+              <arg>5</arg>
+			  <arg>--split-by</arg>
+			  <arg>evnum</arg>
+			  <arg>--map-column-java</arg>
+              <arg>JOB_INSERT=Double,JOB_UPDATE=Double,JOB_REQUEST=Double</arg>
+        </sqoop>
+        <ok to="hive2-cr_sbbs_credhist_req_log"/>
+        <error to="Kill"/>
+    </action>
+    <action name="hive2-cr_sbbs_credhist_req_log" cred="hive2">
+        <hive2 xmlns="uri:oozie:hive2-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <jdbc-url>${hive2_jdbc_url}</jdbc-url>
+            <script>hive/hive_load_month_part.hql</script>
+              <param>DATABASE=${DATABASE}</param>
+              <param>TABLE_NAME=edbch_cr_sbbs_credhist_req_log</param>
+              <param>TMP_DATABASE=${TMP_DATABASE}</param>
+			  <param>PARTITION_DATE=evtime</param>
+        </hive2>
+        <ok to="atom-tail-cr_sbbs_credhist_req_log"/>
+        <error to="Kill"/>
+    </action>
+	<action name="atom-tail-cr_sbbs_credhist_req_log">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <main-class>ru.alfa.bi.hdp.orchestration.AtomTail</main-class>
+            <java-opts>-DATOM_NAME=wf_ssvd_cr_sbbs_credhist_req_log -DDB_CONNECTION=${oracle_jdbc_url} -DDB_USER=${oracle_jdbc_user} -DDB_PASSWORD=${oracle_jdbc_password} -DCURRENT_DAY=${current_day}</java-opts>
+            <file>/user/${user_name}/libs/generator-1.0-SNAPSHOT-jar-with-dependencies.jar#generator-1.0-SNAPSHOT-jar-with-dependencies.jar</file>
+            <file>/user/${user_name}/libs/ojdbc6.jar#ojdbc6.jar</file>
+        </java>
+        <ok to="End"/>
+        <error to="Kill"/>
+    </action>
+    <end name="End"/>
+</workflow-app>

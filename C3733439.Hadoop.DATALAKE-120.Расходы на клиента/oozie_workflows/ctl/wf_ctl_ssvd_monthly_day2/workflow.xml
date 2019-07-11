@@ -1,0 +1,23 @@
+<workflow-app name="wf_ctl_ssvd_monthly_day2" xmlns="uri:oozie:workflow:0.5">
+  <parameters>
+        <property>
+            <name>wf_ctl_name</name>
+			<value>wf_ctl_ssvd_monthly_day2</value>
+        </property>
+  </parameters>
+    <start to="wf_ssvd_cr_sbbs_credhist_req_log"/>
+    <kill name="Kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+	
+	<action name="wf_ssvd_cr_sbbs_credhist_req_log"><!--Stream Count: 5 -->
+        <sub-workflow>
+            <app-path>${nameNode}${wf_atom_path}/wf_ssvd_cr_sbbs_credhist_req_log</app-path>
+              <propagate-configuration/>
+        </sub-workflow>
+        <ok to="End"/>
+        <error to="End"/>
+	</action>
+
+    <end name="End"/>
+</workflow-app>
