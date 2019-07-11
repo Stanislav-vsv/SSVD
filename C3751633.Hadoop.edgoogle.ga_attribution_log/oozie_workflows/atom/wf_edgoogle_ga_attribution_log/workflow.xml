@@ -1,0 +1,105 @@
+<workflow-app xmlns="uri:oozie:workflow:0.5" name="wf_edgoogle_ga_attribution_log">
+	<parameters>
+        <property>
+            <name>wf_reg_name</name>
+        </property>
+        <property>
+            <name>wf_ctl_name</name>
+        </property>
+  </parameters>
+	<credentials>
+		<credential name="hive2" type="hive2">
+		<property>
+			<name>hive2.jdbc.url</name>
+			<value>${hive2_jdbc_url}</value>
+		</property>
+		<property>
+			<name>hive2.server.principal</name>
+			<value>${hive2_server_principal}</value>
+		</property>
+		</credential>
+	</credentials>
+	<start to="atom-header-ga_attribution_log"/>
+	<kill name="Kill">
+		<message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+	</kill>
+	<action name="atom-header-ga_attribution_log">
+		<java>
+	       <job-tracker>${jobTracker}</job-tracker> 
+	       <name-node>${nameNode}</name-node> 
+	       <main-class>ru.alfa.bi.hdp.orchestration.AtomHeader</main-class> 
+	       <java-opts>-DATOM_NAME=wf_edgoogle_ga_attribution_log -DCTL=${wf_ctl_name} -DREG=${wf_reg_name} -DDB_CONNECTION=${oracle_jdbc_url} -DDB_USER=${oracle_jdbc_user} -DDB_PASSWORD=${oracle_jdbc_password} -DCURRENT_DAY=${current_day}</java-opts>
+	       <file>/user/${user_name}/libs/generator-1.0-SNAPSHOT-jar-with-dependencies.jar#generator-1.0-SNAPSHOT-jar-with-dependencies.jar</file>
+	       <file>/user/${user_name}/libs/ojdbc6.jar#ojdbc6.jar</file>
+	 	</java>
+	 	<ok to="fork_1"/>
+        <error to="Kill"/>
+	</action>
+
+    <fork name="fork_1">
+            <path start="hive2-ga_hitnumb_log_tmp" />
+            <path start="hive2-ga_customdimensions_log_tmp" />
+   </fork>
+
+	<action name="hive2-ga_hitnumb_log_tmp" cred="hive2">
+		<hive2 xmlns="uri:oozie:hive2-action:0.1">
+			<job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <jdbc-url>${hive2_jdbc_url}</jdbc-url>
+            <script>hive/ga_hitnumb_log_tmp.hql</script>
+             <param>DATABASE=${DATABASE}</param>
+             <param>TMP_DATABASE=${TMP_DATABASE}</param>
+	    <param>TMP_TABLE_TYPE=${TMP_TABLE_TYPE}</param>
+	    <param>LOAD_DATE_FROM=${LOAD_DATE_FROM}</param>
+	  <param>LOAD_DATE_TO=${LOAD_DATE_TO}</param>
+		</hive2>
+		<ok to="join_1"/>
+		<error to="Kill"/>
+	</action>
+	
+	<action name="hive2-ga_customdimensions_log_tmp" cred="hive2">
+		<hive2 xmlns="uri:oozie:hive2-action:0.1">
+			<job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <jdbc-url>${hive2_jdbc_url}</jdbc-url>
+            <script>hive/ga_customdimensions_log_tmp.hql</script>
+              <param>DATABASE=${DATABASE}</param>
+              <param>TMP_DATABASE=${TMP_DATABASE}</param>
+	    <param>TMP_TABLE_TYPE=${TMP_TABLE_TYPE}</param>
+	    <param>LOAD_DATE_FROM=${LOAD_DATE_FROM}</param>
+	    <param>LOAD_DATE_TO=${LOAD_DATE_TO}</param>
+		</hive2>
+		<ok to="join_1"/>
+		<error to="Kill"/>
+	</action>
+	
+<join name="join_1" to="hive2-ga_attribution_log"/>
+
+	<action name="hive2-ga_attribution_log" cred="hive2">
+		<hive2 xmlns="uri:oozie:hive2-action:0.1">
+			<job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <jdbc-url>${hive2_jdbc_url}</jdbc-url>
+            <script>hive/ga_attribution_log.hql</script>
+              <param>DATABASE=${DATABASE}</param>
+              <param>TMP_DATABASE=${TMP_DATABASE}</param>
+			  <param>TMP_TABLE_TYPE=${TMP_TABLE_TYPE}</param>
+		</hive2>
+		<ok to="atom-tail-ga_attribution_log"/>
+		<error to="Kill"/>
+	</action>	
+	
+	<action name="atom-tail-ga_attribution_log">
+		<java>
+			<job-tracker>${jobTracker}</job-tracker>
+			<name-node>${nameNode}</name-node>
+			<main-class>ru.alfa.bi.hdp.orchestration.AtomTail</main-class>
+			<java-opts>-DATOM_NAME=wf_edgoogle_ga_attribution_log -DDB_CONNECTION=${oracle_jdbc_url} -DDB_USER=${oracle_jdbc_user} -DDB_PASSWORD=${oracle_jdbc_password} -DCURRENT_DAY=${current_day}</java-opts>
+			<file>/user/${user_name}/libs/generator-1.0-SNAPSHOT-jar-with-dependencies.jar#generator-1.0-SNAPSHOT-jar-with-dependencies.jar</file>
+			<file>/user/${user_name}/libs/ojdbc6.jar#ojdbc6.jar</file>
+		</java>
+		<ok to="End"/>
+		<error to="Kill"/>
+	</action>
+	<end name="End"/>
+</workflow-app>

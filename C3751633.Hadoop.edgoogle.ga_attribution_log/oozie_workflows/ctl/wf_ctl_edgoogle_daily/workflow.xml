@@ -1,0 +1,24 @@
+<workflow-app name="wf_ctl_edgoogle_daily" xmlns="uri:oozie:workflow:0.5">
+    <parameters>
+        <property>
+            <name>wf_ctl_name</name>
+	    <value>wf_ctl_edgoogle_daily</value>
+        </property>
+    </parameters>
+	<start to="wf_edgoogle_ga_attribution_log"/>
+    <kill name="Kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+	
+	
+	<action name="wf_edgoogle_ga_attribution_log">
+        <sub-workflow>
+            <app-path>${nameNode}${wf_atom_path}/wf_edgoogle_ga_attribution_log</app-path>
+              <propagate-configuration/>
+	</sub-workflow>
+        <ok to="End"/>
+        <error to="End"/>
+	</action>
+	
+    <end name="End"/>
+</workflow-app>

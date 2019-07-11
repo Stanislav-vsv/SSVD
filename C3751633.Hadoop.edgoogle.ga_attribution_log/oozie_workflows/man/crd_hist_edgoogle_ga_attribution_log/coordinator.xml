@@ -1,0 +1,54 @@
+<coordinator-app name="crd_hist_edgoogle_ga_attribution_log"
+         frequency="${coord:days(15)}"
+         start="${coord_start_time}"
+         end="${coord_end_time}"
+         timezone="GMT+03:00"
+         xmlns="uri:oozie:coordinator:0.4">
+  <action>
+    <workflow>
+      <app-path>${workflow_application_path}</app-path>
+      <configuration>
+        <property>
+            <name>wf_reg_name</name>
+	    <value>man_hist_edgoogle_ga_attribution_log</value>
+        </property>
+        <property>
+            <name>wf_ctl_name</name>
+			<value>manual</value>
+        </property>
+		<property>
+          <name>wf_atom_path</name>
+          <value>${wf_atom_path}</value>
+        </property>
+        <property>
+          <name>nameNode</name>
+          <value>${nameNode}</value>
+        </property>
+        <property>
+          <name>hive2_jdbc_url</name>
+          <value>${hive2_jdbc_url}</value>
+        </property>
+        <property>
+          <name>hive2_server_principal</name>
+          <value>${hive2_server_principal}</value>
+        </property>
+        <property>
+          <name>TMP_TABLE_TYPE</name>
+          <value>${TMP_TABLE_TYPE}</value>
+        </property>
+        <property>
+          <name>LOAD_DATE_FROM</name>
+          <value>${coord:formatTime(coord:dateOffset(coord:nominalTime(), -15, 'DAY'), 'yyyyMMdd')}</value>
+        </property>
+        <property>
+          <name>LOAD_DATE_TO</name>
+          <value>${coord:formatTime(coord:nominalTime(), 'yyyyMMdd')}</value>
+        </property>
+		    <property>
+          <name>current_day_for_start</name>
+          <value>${coord:formatTime(coord:nominalTime(), 'dd.MM.yyyy')}</value>
+        </property>
+      </configuration>
+    </workflow>
+  </action>
+</coordinator-app>
